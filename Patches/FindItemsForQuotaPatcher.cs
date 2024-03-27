@@ -82,7 +82,7 @@ namespace FindItemsForQuotaBepin5.Patches
             if (!CurrentLevel) { Log.LogMessage("Scene hasn't loaded yet!"); return; }
             if (!ShipLanded) { Log.LogMessage("Ship hasn't landed yet!"); return; }
             if (CurrentLevel.levelID != 3) { Log.LogMessage("Not at company building!"); return; }
-            if (CompletedThisRound) { Log.LogMessage("Already found items this quota!"); }
+            if (CompletedThisRound) { Log.LogMessage("Already found items this quota!"); return; }
             CompletedThisRound = true;
             Log.LogMessage($"Current moon: {CurrentLevel.name}");
             Log.LogMessage($"Current quota: {ProfitQuota}");
