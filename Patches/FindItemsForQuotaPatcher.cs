@@ -1,9 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using BepInEx.Configuration;
 using BepInEx.Logging;
 using GameNetcodeStuff;
 using HarmonyLib;
+using Mono.Cecil.Cil;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using static FindItemsForQuotaBepin5.Przydatek;
@@ -21,6 +24,21 @@ namespace FindItemsForQuotaBepin5.Patches
         private static GameObject _ship;
         private static bool ShipLanded { get { return StartOfRound.Instance.shipHasLanded; } }
         private static bool CompletedThisRound = false;
+        private static int Credits;
+
+        [HarmonyPatch(typeof(Terminal), "Start")]
+        [HarmonyPostfix]
+        private static void UpdateCreditsStart(int ___groupCredits)
+        {
+            Credits = ___groupCredits;
+        }
+
+        [HarmonyPatch(typeof(Terminal), "BuyItemsServerRpc")]
+        [HarmonyPostfix]
+        private static void UpdateCreditsAfterPurchase(int ___groupCredits)
+        {
+            Credits = ___groupCredits;
+        }
 
         [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
         [HarmonyPostfix]
@@ -75,17 +93,40 @@ namespace FindItemsForQuotaBepin5.Patches
                 .ToList();
             Player.transform.position = new Vector3(-25.75f, -2.62f, -31.33f);
             Log.LogMessage($"Player position: {Player.transform.position}");
+            var filteredLoot = loot.Where(loot => IsItemAllowed(loot.name.Substring(0, loot.name.Count() - 7), Plugin.ConfigInstance.Filter)).ToList();
+            if (filteredLoot.Select(loot => loot.scrapValue).Sum() > CalculateMoneyNeeded())
+            {
+                loot = filteredLoot;
+            }
+            Log.LogMessage(CalculateMoneyNeeded());
+            List<int> subset = PrzydatekFast(loot.Select(loot => loot.scrapValue).ToList(), CalculateMoneyNeeded());
+            Log.LogMessage($"Total items being sold: {subset.Sum()}");
+            loot = loot.Where((loot, index) => subset[index] == 1).ToList();
             GameNetworkManager.Instance.StartCoroutine(TeleportObjects(loot));
+        }
+
+        private static int CalculateMoneyNeeded()
+        {
+            int soldSufficientlyBig = Mathf.CeilToInt((1f/6) * (-5 * Credits + ProfitQuota + 2825));
+            if (soldSufficientlyBig - ProfitQuota >= 6 * 15) return Mathf.Max(soldSufficientlyBig, ProfitQuota);
+            return Mathf.Max(ProfitQuota, 550 - Credits);
+
+        }
+
+        private static bool IsItemAllowed(string item, Dictionary<string, ConfigEntry<bool>> Filter)
+        {
+            bool exists = Filter.TryGetValue(item, out ConfigEntry<bool> ret);
+            return !exists || !ret.Value;
         }
 
         private static IEnumerator TeleportObjects(List<GrabbableObject> loot)
         {
             // Items don't teleport if teleported right away
-            yield return new WaitForSeconds(1f);
-            List<int> subset = PrzydatekFast(loot.Select(loot => loot.scrapValue).ToList(), ProfitQuota);
-            loot = loot.Where((loot, index) => subset[index] == 1).ToList();
+            yield return new WaitForSeconds(3f);
+            // string items = string.Join("\n", loot.Select(loot => loot.name).Distinct());
+            // File.WriteAllText(Directory.GetCurrentDirectory() + @"\items.txt", items);
             foreach (var grab in loot)
-            {
+            { 
                 Log.LogMessage($"Object name: {grab.name} with value {grab.scrapValue}");
                 float oldCarryWeight = Player.carryWeight;
                 Player.currentlyHeldObject = grab;
@@ -94,6 +135,7 @@ namespace FindItemsForQuotaBepin5.Patches
                 try { Player.DiscardHeldObject(); }
                 catch { Log.LogInfo("Shotgun"); }
                 Player.carryWeight = oldCarryWeight;
+                
             }
             int totalSum = loot.Select(loot => loot.scrapValue).Sum();
             Log.LogMessage($"Total sold: {totalSum}, remaining: {ProfitQuota - totalSum}");

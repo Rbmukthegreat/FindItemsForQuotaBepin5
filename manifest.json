@@ -1,0 +1,9 @@
+{
+  "name": "FindItemsForQuota",
+  "version_number": "1.0.1",
+  "website_url": "https://github.com/Rbmukthegreat/FIndItemsForQuota",
+  "description": "Finds the items to min-max the quota and tps them in front of the company shelf.",
+  "dependencies": [
+    "BepInEx-BepInExPack-5.4.2100"
+  ]
+}

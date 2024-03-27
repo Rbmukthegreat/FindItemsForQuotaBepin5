@@ -11,6 +11,7 @@ public class Plugin : BaseUnityPlugin
     private const string modGUID = "Rbmukthegreat.FindItemsForQuotaMod";
     private const string modName = "Find Items For Quota Mod";
     private const string modVersion = "1.1";
+    internal new static FindItemsForQuotaBepin5Config ConfigInstance;
 
     private readonly Harmony harmony = new Harmony(modGUID);
 
@@ -22,6 +23,9 @@ public class Plugin : BaseUnityPlugin
         // Plugin startup logic
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
         Logger.LogInfo($"Current version: {MyPluginInfo.PLUGIN_VERSION}");
+
+        ConfigInstance = new FindItemsForQuotaBepin5Config(base.Config);
+        ConfigInstance.RegisterOptions();
 
         harmony.PatchAll(Assembly.GetExecutingAssembly());
     }
