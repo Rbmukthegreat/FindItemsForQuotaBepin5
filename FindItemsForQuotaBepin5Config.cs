@@ -16,7 +16,7 @@ namespace FindItemsForQuotaBepin5
     {
         private readonly ConfigFile Config = File;
         public Dictionary<string, ConfigEntry<bool>> Filter;
-        private readonly List<string> GeneralItems = new(["PerfumeBottle",
+        private readonly List<string> GeneralItems = new([      "PerfumeBottle",
                                                                 "LaserPointer",
                                                                 "FancyLamp",
                                                                 "RedSodaCan",
@@ -33,12 +33,13 @@ namespace FindItemsForQuotaBepin5
                                                                 "Magic7Ball",
                                                                 "ComedyMask",
                                                                 "OldPhone",
-                                                                "LungApparatusTurnedOff",
                                                                 "Airhorn",
                                                                 "ToyCube",
                                                                 "BinFullOfBottles",
                                                                 "Hairbrush"]);
         private readonly List<string> SpecialItems = new([      "PickleJar",
+                                                                "LungApparatusTurnedOff",
+                                                                "GiftBox",
                                                                 "GoldBar",
                                                                 "RedLocustHive",
                                                                 "ShotgunItem",
