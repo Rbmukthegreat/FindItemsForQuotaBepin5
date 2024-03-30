@@ -1,12 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using GameNetcodeStuff;
 using HarmonyLib;
-using Mono.Cecil.Cil;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using static FindItemsForQuotaBepin5.Przydatek;
@@ -16,7 +14,7 @@ namespace FindItemsForQuotaBepin5.Patches
     [HarmonyPatch]
     internal class FindItemsForQuotaPatcher
     {
-        private static ManualLogSource Log = Plugin.Log;
+        private static readonly ManualLogSource Log = Plugin.Log;
         private static InputAction FindItemsForQuotaAction;
         private static int ProfitQuota { get { return TimeOfDay.Instance.profitQuota; } }
         private static SelectableLevel CurrentLevel { get { return StartOfRound.Instance?.currentLevel; } }
@@ -84,30 +82,37 @@ namespace FindItemsForQuotaBepin5.Patches
             if (CurrentLevel.levelID != 3) { Log.LogMessage("Not at company building!"); return; }
             if (CompletedThisRound) { Log.LogMessage("Already found items this quota!"); return; }
             CompletedThisRound = true;
+
             Log.LogMessage($"Current moon: {CurrentLevel.name}");
             Log.LogMessage($"Current quota: {ProfitQuota}");
-            // Taken from shiploot source code
-            if (!_ship) _ship = GameObject.Find("/Environment/HangarShip");
-            var loot = _ship.GetComponentsInChildren<GrabbableObject>()
-                .Where(obj => obj.itemProperties.isScrap && obj is not RagdollGrabbableObject)
-                .ToList();
-            Player.transform.position = new Vector3(-25.75f, -2.62f, -31.33f);
+
+            var loot = GetLoot();
+
+            Player.transform.position = new Vector3(-27.95f, -2.62f, -31.36f);
             Log.LogMessage($"Player position: {Player.transform.position}");
-            var filteredLoot = loot.Where(loot => IsItemAllowed(loot.name.Substring(0, loot.name.Count() - 7), Plugin.ConfigInstance.Filter)).ToList();
-            if (filteredLoot.Select(loot => loot.scrapValue).Sum() > CalculateMoneyNeeded())
-            {
-                loot = filteredLoot;
-            }
-            Log.LogMessage(CalculateMoneyNeeded());
+            
+            Log.LogMessage($"Money needed: {CalculateMoneyNeeded()}");
             List<int> subset = PrzydatekFast(loot.Select(loot => loot.scrapValue).ToList(), CalculateMoneyNeeded());
             Log.LogMessage($"Total items being sold: {subset.Sum()}");
             loot = loot.Where((loot, index) => subset[index] == 1).ToList();
             GameNetworkManager.Instance.StartCoroutine(TeleportObjects(loot));
         }
 
+        private static List<GrabbableObject> GetLoot()
+        {
+            if (!_ship) _ship = GameObject.Find("/Environment/HangarShip");
+            var loot = _ship.GetComponentsInChildren<GrabbableObject>()
+                .Where(obj => obj.itemProperties.isScrap && obj is not RagdollGrabbableObject)
+                .ToList();
+            var filteredLoot = loot.Where(loot => IsItemAllowed(loot.name.Substring(0, loot.name.Count() - 7), Plugin.ConfigInstance.Filter)).ToList();
+            if (filteredLoot.Select(loot => loot.scrapValue).Sum() > CalculateMoneyNeeded())
+                loot = filteredLoot;
+            return loot;
+        }
+
         private static int CalculateMoneyNeeded()
         {
-            int soldSufficientlyBig = Mathf.CeilToInt((1f/6) * (-5 * Credits + ProfitQuota + 2825));
+            int soldSufficientlyBig = Mathf.CeilToInt(1f/6 * (-5 * Credits + ProfitQuota + 2825));
             if (soldSufficientlyBig - ProfitQuota >= 6 * 15) return Mathf.Max(soldSufficientlyBig, ProfitQuota);
             return Mathf.Max(ProfitQuota, 550 - Credits);
 
