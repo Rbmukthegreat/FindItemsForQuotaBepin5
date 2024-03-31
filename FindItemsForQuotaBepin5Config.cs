@@ -39,7 +39,6 @@ namespace FindItemsForQuotaBepin5
                                                                 "Hairbrush"]);
         private readonly List<string> SpecialItems = new([      "PickleJar",
                                                                 "LungApparatusTurnedOff",
-                                                                "GiftBox",
                                                                 "GoldBar",
                                                                 "RedLocustHive",
                                                                 "ShotgunItem",

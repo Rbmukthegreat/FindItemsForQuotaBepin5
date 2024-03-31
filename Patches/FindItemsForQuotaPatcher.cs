@@ -17,6 +17,7 @@ namespace FindItemsForQuotaBepin5.Patches
         private static readonly ManualLogSource Log = Plugin.Log;
         private static InputAction FindItemsForQuotaAction;
         private static int ProfitQuota { get { return TimeOfDay.Instance.profitQuota; } }
+        private static int QuotaFulfilled { get { return TimeOfDay.Instance.quotaFulfilled;  } }
         private static SelectableLevel CurrentLevel { get { return StartOfRound.Instance?.currentLevel; } }
         private static PlayerControllerB Player { get { return StartOfRound.Instance?.localPlayerController; } }
         private static GameObject _ship;
@@ -83,13 +84,10 @@ namespace FindItemsForQuotaBepin5.Patches
             if (CompletedThisRound) { Log.LogMessage("Already found items this quota!"); return; }
             CompletedThisRound = true;
 
-            Log.LogMessage($"Current moon: {CurrentLevel.name}");
-            Log.LogMessage($"Current quota: {ProfitQuota}");
-
             var loot = GetLoot();
 
-            Player.transform.position = new Vector3(-27.95f, -2.62f, -31.36f);
-            Log.LogMessage($"Player position: {Player.transform.position}");
+            Vector3 companyShelfLocation = new(-27.95f, -2.62f, -31.36f);
+            Player.transform.position = companyShelfLocation;
             
             Log.LogMessage($"Money needed: {CalculateMoneyNeeded()}");
             List<int> subset = PrzydatekFast(loot.Select(loot => loot.scrapValue).ToList(), CalculateMoneyNeeded());
@@ -101,10 +99,11 @@ namespace FindItemsForQuotaBepin5.Patches
         private static List<GrabbableObject> GetLoot()
         {
             if (!_ship) _ship = GameObject.Find("/Environment/HangarShip");
+            string Clone = "(Clone)";
             var loot = _ship.GetComponentsInChildren<GrabbableObject>()
-                .Where(obj => obj.itemProperties.isScrap && obj is not RagdollGrabbableObject)
+                .Where(obj => obj.itemProperties.isScrap && obj is not RagdollGrabbableObject && obj.name.Substring(0,obj.name.Count() - Clone.Count()) != "GiftBox")
                 .ToList();
-            var filteredLoot = loot.Where(loot => IsItemAllowed(loot.name.Substring(0, loot.name.Count() - 7), Plugin.ConfigInstance.Filter)).ToList();
+            var filteredLoot = loot.Where(loot => IsItemAllowed(loot.name.Substring(0, loot.name.Count() - Clone.Count()), Plugin.ConfigInstance.Filter)).ToList();
             if (filteredLoot.Select(loot => loot.scrapValue).Sum() > CalculateMoneyNeeded())
                 loot = filteredLoot;
             return loot;
@@ -112,10 +111,9 @@ namespace FindItemsForQuotaBepin5.Patches
 
         private static int CalculateMoneyNeeded()
         {
-            int soldSufficientlyBig = Mathf.CeilToInt(1f/6 * (-5 * Credits + ProfitQuota + 2825));
-            if (soldSufficientlyBig - ProfitQuota >= 6 * 15) return Mathf.Max(soldSufficientlyBig, ProfitQuota);
-            return Mathf.Max(ProfitQuota, 550 - Credits);
-
+            int soldSufficientlyBig = Mathf.CeilToInt(1f/6 * (-5 * (Credits + QuotaFulfilled) + ProfitQuota + 2825));
+            if (soldSufficientlyBig - ProfitQuota >= 6 * 15) return Mathf.Max(soldSufficientlyBig, ProfitQuota - QuotaFulfilled);
+            return Mathf.Max(ProfitQuota - QuotaFulfilled, 550 - Credits);
         }
 
         private static bool IsItemAllowed(string item, Dictionary<string, ConfigEntry<bool>> Filter)

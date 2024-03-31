@@ -1,6 +1,6 @@
 {
   "name": "FindItemsForQuota",
-  "version_number": "1.1.0",
+  "version_number": "1.1.1",
   "website_url": "https://github.com/Rbmukthegreat/FIndItemsForQuota",
   "description": "Finds the items to min-max the quota and tps them in front of the company shelf.",
   "dependencies": [
