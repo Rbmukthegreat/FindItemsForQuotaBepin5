@@ -2,13 +2,23 @@
 A mod that finds the items that sum as close as possible to quota (a.k.a "min-maxing") and teleports them in front of where they need to be sold.
 
 ## Usage
-To use this mod, you need to be at the company, wait for the ship to be landed (wait until the lever stops saying "[wait for ship to land]"), and click the backslash (\\) key on your keyboard. 
+To use this mod, you need to be at the company, wait for the ship to be landed (wait until the lever stops saying "[wait for ship to land]"), and then type one of the following commands into the in-game chat:
 
-I've recently discovered that if there are too many items on ship ($\geq250$) then a wide number of desyncs happen, including shotguns having the safety on/off for different people, and for this mod in particular, the value of scrap on ship showing up as lower for people who are not host. This in particular means that the mod will grab too many items because it does not have the correct value of scrap on the ship. In particular, this means that
+".find moon" where "moon" is either rend or art
 
-**If you are not host, do not use this mod if there are $\geq250$ items on ship.**
+".find target"
 
-Since this host cannot desync from themselves, this mod has no issues when you are the host. Of course, if there are $\leq 250$ items, then any person (not just the host) can use this mod freely, without any problems. 
+.find rend will find the amount of money needed to either hit quota or go to rend (have 550), .find art does something similar, and .find target will find the amount of money you need to have an extra target amount of money after overtime has been calculated. 
+
+For example, say I wanted to buy a jetpack, and I currently have $200 saved up. Since jetpacks cost $500, I would then run /find 500, and it would find the items so that you have $700 **after** the overtime bonus.
+
+## Issues
+
+I've recently discovered that if there are too many items on ship (> 250) then a wide number of desyncs happen, including shotguns having the safety on/off for different people, and for this mod in particular, the value of scrap on ship showing up as lower for people who are not host. This in particular means that the mod will grab too many items because it does not have the correct value of scrap on the ship. In particular, this means that
+
+**If you are not host, do not use this mod if there are > 250 items on ship.**
+
+Since this host cannot desync from themselves, this mod has no issues when you are the host. Of course, if there are <=250 items, then any person (not just the host) can use this mod freely, without any problems. 
 
 ## Installation
 - Install [BepInEx](https://thunderstore.io/c/lethal-company/p/BepInEx/BepInExPack/)

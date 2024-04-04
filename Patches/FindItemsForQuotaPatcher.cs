@@ -22,7 +22,6 @@ namespace FindItemsForQuotaBepin5.Patches
         private static PlayerControllerB Player { get { return StartOfRound.Instance?.localPlayerController; } }
         private static GameObject _ship;
         private static bool ShipLanded { get { return StartOfRound.Instance.shipHasLanded; } }
-        private static bool CompletedThisRound = false;
         private static int Credits;
 
         [HarmonyPatch(typeof(Terminal), "Start")]
@@ -39,11 +38,20 @@ namespace FindItemsForQuotaBepin5.Patches
             Credits = ___groupCredits;
         }
 
-        [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
+        [HarmonyPatch(typeof(HUDManager), "AddTextToChatOnServer")]
         [HarmonyPostfix]
-        private static void OnLoad()
+        private static void GetText(string chatMessage)
         {
-            CompletedThisRound = false;
+            Log.LogMessage(chatMessage);
+            string[] words = chatMessage.Split(' ');
+            if (words.Length < 2) return;
+            if (words[0] == ".find" && int.TryParse(words[1], out int target))
+            {
+                FindItems(null, target);
+            } else if (words[0] == ".find" && (words[1].ToLower() == "rend" || words[1].ToLower() == "art"))
+            {
+                FindItems(words[1], 0);
+            }
         }
 
         [HarmonyPatch(typeof(StartOfRound), "openingDoorsSequence")]
@@ -59,44 +67,28 @@ namespace FindItemsForQuotaBepin5.Patches
             Log.LogMessage("Ship has landed!");
         }
 
-        [HarmonyPatch(typeof(StartOfRound), "OnEnable")]
-        [HarmonyPostfix]
-        private static void OnEnable()
-        {
-            FindItemsForQuotaAction = new InputAction("FindItemsForQuota.FindItems", binding: "<Keyboard>/backslash");
-            FindItemsForQuotaAction.Enable();
-            FindItemsForQuotaAction.started += OnFindItemsAction;
-        }
-
-        [HarmonyPatch(typeof(StartOfRound), "OnDisable")]
-        [HarmonyPostfix]
-        private static void OnDisable()
-        {
-            FindItemsForQuotaAction.started -= OnFindItemsAction;
-            FindItemsForQuotaAction.Disable();
-        }
-
-        private static void OnFindItemsAction(InputAction.CallbackContext context)
+        private static void FindItems(string moon, int target)
         {
             if (!CurrentLevel) { Log.LogMessage("Scene hasn't loaded yet!"); return; }
             if (!ShipLanded) { Log.LogMessage("Ship hasn't landed yet!"); return; }
             if (CurrentLevel.levelID != 3) { Log.LogMessage("Not at company building!"); return; }
-            if (CompletedThisRound) { Log.LogMessage("Already found items this quota!"); return; }
-            CompletedThisRound = true;
 
-            var loot = GetLoot();
+            int moneyNeeded = CalculateMoneyNeeded(moon, target);
+            Log.LogMessage($"Money needed: {moneyNeeded}");
+
+            var loot = GetLoot(moneyNeeded);
 
             Vector3 companyShelfLocation = new(-27.95f, -2.62f, -31.36f);
             Player.transform.position = companyShelfLocation;
             
-            Log.LogMessage($"Money needed: {CalculateMoneyNeeded()}");
-            List<int> subset = PrzydatekFast(loot.Select(loot => loot.scrapValue).ToList(), CalculateMoneyNeeded());
+            Log.LogMessage($"Money needed: {CalculateMoneyNeeded(moon, target)}");
+            List<int> subset = PrzydatekFast(loot.Select(loot => loot.scrapValue).ToList(), moneyNeeded);
             Log.LogMessage($"Total items being sold: {subset.Sum()}");
             loot = loot.Where((loot, index) => subset[index] == 1).ToList();
             GameNetworkManager.Instance.StartCoroutine(TeleportObjects(loot));
         }
 
-        private static List<GrabbableObject> GetLoot()
+        private static List<GrabbableObject> GetLoot(int moneyNeeded)
         {
             if (!_ship) _ship = GameObject.Find("/Environment/HangarShip");
             string Clone = "(Clone)";
@@ -104,16 +96,26 @@ namespace FindItemsForQuotaBepin5.Patches
                 .Where(obj => obj.itemProperties.isScrap && obj is not RagdollGrabbableObject && obj.name.Substring(0,obj.name.Count() - Clone.Count()) != "GiftBox")
                 .ToList();
             var filteredLoot = loot.Where(loot => IsItemAllowed(loot.name.Substring(0, loot.name.Count() - Clone.Count()), Plugin.ConfigInstance.Filter)).ToList();
-            if (filteredLoot.Select(loot => loot.scrapValue).Sum() > CalculateMoneyNeeded())
+            if (filteredLoot.Select(loot => loot.scrapValue).Sum() > moneyNeeded)
                 loot = filteredLoot;
             return loot;
         }
 
-        private static int CalculateMoneyNeeded()
+        private static int CalculateMoneyNeeded(string moon, int totalNeeded)
         {
-            int soldSufficientlyBig = Mathf.CeilToInt(1f/6 * (-5 * (Credits + QuotaFulfilled) + ProfitQuota + 2825));
-            if (soldSufficientlyBig - ProfitQuota >= 6 * 15) return Mathf.Max(soldSufficientlyBig, ProfitQuota - QuotaFulfilled);
-            return Mathf.Max(ProfitQuota - QuotaFulfilled, 550 - Credits);
+            if (moon != null)
+            {
+                int moonValue = (moon == "rend") ? 550 : 1500;
+                return Mathf.Max(NeedToSell(moonValue - Credits), ProfitQuota - QuotaFulfilled);
+            } else
+            {
+                return (NeedToSell(totalNeeded) < totalNeeded) ? NeedToSell(totalNeeded) : totalNeeded;
+            }
+        }
+
+        private static int NeedToSell(int target)
+        {
+            return Mathf.CeilToInt(1f/6*(5*target + ProfitQuota - QuotaFulfilled));
         }
 
         private static bool IsItemAllowed(string item, Dictionary<string, ConfigEntry<bool>> Filter)
@@ -125,11 +127,12 @@ namespace FindItemsForQuotaBepin5.Patches
         private static IEnumerator TeleportObjects(List<GrabbableObject> loot)
         {
             // Items don't teleport if teleported right away
-            yield return new WaitForSeconds(3f);
+            yield return new WaitForSeconds(1f);
             // string items = string.Join("\n", loot.Select(loot => loot.name).Distinct());
             // File.WriteAllText(Directory.GetCurrentDirectory() + @"\items.txt", items);
             foreach (var grab in loot)
-            { 
+            {
+                yield return new WaitForSeconds(0.1f);
                 Log.LogMessage($"Object name: {grab.name} with value {grab.scrapValue}");
                 float oldCarryWeight = Player.carryWeight;
                 Player.currentlyHeldObject = grab;
@@ -141,7 +144,7 @@ namespace FindItemsForQuotaBepin5.Patches
                 
             }
             int totalSum = loot.Select(loot => loot.scrapValue).Sum();
-            Log.LogMessage($"Total sold: {totalSum}, remaining: {ProfitQuota - totalSum}");
+            Log.LogMessage($"Total sold: {totalSum}");
         }
     }
 }
