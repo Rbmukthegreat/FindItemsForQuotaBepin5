@@ -84,7 +84,7 @@ namespace FindItemsForQuotaBepin5.Patches
             List<int> subset = PrzydatekFast(loot.Select(loot => loot.scrapValue).ToList(), moneyNeeded);
             Log.LogMessage($"Total items being sold: {subset.Sum()}");
             loot = loot.Where((loot, index) => subset[index] == 1).ToList();
-            GameNetworkManager.Instance.StartCoroutine(TeleportObjects(loot));
+            TeleportObjects(loot);
         }
 
         private static List<GrabbableObject> GetLoot(int moneyNeeded)
@@ -126,26 +126,20 @@ namespace FindItemsForQuotaBepin5.Patches
             return !exists || !ret.Value;
         }
 
-        private static IEnumerator TeleportObjects(List<GrabbableObject> loot)
+        private static void TeleportObjects(List<GrabbableObject> loot)
         {
-            // Items don't teleport if teleported right away
-            yield return new WaitForSeconds(1f);
-            // string items = string.Join("\n", loot.Select(loot => loot.name).Distinct());
-            // File.WriteAllText(Directory.GetCurrentDirectory() + @"\items.txt", items);
             foreach (var grab in loot)
             {
-                Log.LogMessage($"Object name: {grab.name} with value {grab.scrapValue}");
-                float oldCarryWeight = Player.carryWeight;
-                Player.currentlyHeldObject = grab;
-                Player.currentlyHeldObjectServer = grab;
-                // Silly fix, but it works.
-                try { Player.DiscardHeldObject(); }
-                catch { Log.LogInfo("Shotgun"); }
-                Player.carryWeight = oldCarryWeight;
-                
+                DropItemAt(grab, Player.transform.position);
             }
             int totalSum = loot.Select(loot => loot.scrapValue).Sum();
             Log.LogMessage($"Total sold: {totalSum}");
+        }
+
+        private static void DropItemAt(GrabbableObject item, Vector3 position)
+        {
+            item.transform.position = position;
+            item.FallToGround();
         }
     }
 }

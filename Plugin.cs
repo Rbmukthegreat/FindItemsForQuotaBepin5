@@ -5,15 +5,15 @@ using System.Reflection;
 
 namespace FindItemsForQuotaBepin5;
 
-[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
+[BepInPlugin(modGUID, modName, modVersion)]
 public class Plugin : BaseUnityPlugin
 {
     private const string modGUID = "Rbmukthegreat.FindItemsForQuotaMod";
     private const string modName = "Find Items For Quota Mod";
-    private const string modVersion = "1.1";
-    internal new static FindItemsForQuotaBepin5Config ConfigInstance;
+    private const string modVersion = "1.2.2";
+    internal static FindItemsForQuotaBepin5Config ConfigInstance;
 
-    private readonly Harmony harmony = new Harmony(modGUID);
+    private readonly Harmony harmony = new(modGUID);
 
     internal static ManualLogSource Log;
 
