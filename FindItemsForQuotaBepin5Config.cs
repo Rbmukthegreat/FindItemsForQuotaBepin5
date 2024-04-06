@@ -1,14 +1,5 @@
 ﻿using BepInEx.Configuration;
-using System;
-using System.CodeDom;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Unity.Collections;
-using BepInEx.Configuration;
-using UnityEngine.Yoga;
-using UnityEngine.Assertions;
 
 namespace FindItemsForQuotaBepin5
 {
@@ -43,7 +34,8 @@ namespace FindItemsForQuotaBepin5
                                                                 "RedLocustHive",
                                                                 "ShotgunItem",
                                                                 "RubberDucky",
-                                                                "CashRegisterItem"]);
+                                                                "CashRegisterItem",
+                                                                "KnifeItem"]);
 
         public void RegisterOptions()
         {

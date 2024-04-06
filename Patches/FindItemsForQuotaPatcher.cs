@@ -80,8 +80,7 @@ namespace FindItemsForQuotaBepin5.Patches
 
             Vector3 companyShelfLocation = new(-27.95f, -2.62f, -31.36f);
             Player.transform.position = companyShelfLocation;
-            
-            Log.LogMessage($"Money needed: {CalculateMoneyNeeded(moon, target)}");
+
             List<int> subset = PrzydatekFast(loot.Select(loot => loot.scrapValue).ToList(), moneyNeeded);
             Log.LogMessage($"Total items being sold: {subset.Sum()}");
             loot = loot.Where((loot, index) => subset[index] == 1).ToList();
@@ -93,7 +92,8 @@ namespace FindItemsForQuotaBepin5.Patches
             if (!_ship) _ship = GameObject.Find("/Environment/HangarShip");
             string Clone = "(Clone)";
             var loot = _ship.GetComponentsInChildren<GrabbableObject>()
-                .Where(obj => obj.itemProperties.isScrap && obj is not RagdollGrabbableObject && obj.name.Substring(0,obj.name.Count() - Clone.Count()) != "GiftBox")
+                .Where(obj => obj.itemProperties.isScrap && obj is not RagdollGrabbableObject 
+                       && obj.name.Substring(0,obj.name.Count() - Clone.Count()) != "GiftBox")
                 .ToList();
             var filteredLoot = loot.Where(loot => IsItemAllowed(loot.name.Substring(0, loot.name.Count() - Clone.Count()), Plugin.ConfigInstance.Filter)).ToList();
             if (filteredLoot.Select(loot => loot.scrapValue).Sum() > moneyNeeded)
@@ -115,7 +115,9 @@ namespace FindItemsForQuotaBepin5.Patches
 
         private static int NeedToSell(int target)
         {
-            return Mathf.CeilToInt(1f/6*(5*target + ProfitQuota - QuotaFulfilled));
+            int overtime = 15;
+            // Sometimes the game gives you the + 15, other times it doesn't. Not sure why.
+            return Mathf.CeilToInt(1f/6*(5*(target + overtime) + ProfitQuota - QuotaFulfilled));
         }
 
         private static bool IsItemAllowed(string item, Dictionary<string, ConfigEntry<bool>> Filter)
@@ -132,7 +134,6 @@ namespace FindItemsForQuotaBepin5.Patches
             // File.WriteAllText(Directory.GetCurrentDirectory() + @"\items.txt", items);
             foreach (var grab in loot)
             {
-                yield return new WaitForSeconds(0.1f);
                 Log.LogMessage($"Object name: {grab.name} with value {grab.scrapValue}");
                 float oldCarryWeight = Player.carryWeight;
                 Player.currentlyHeldObject = grab;
